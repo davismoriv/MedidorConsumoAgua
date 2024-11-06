@@ -3,20 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitor de Consumo de Agua</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Control de Consumo de Agua</title>
+    <script>
+        // API key y URL del canal de ThingSpeak
+        const apiKey = "TU_API_KEY_THINGSPEAK";
+        const channelId = "TU_CHANNEL_ID";
+        
+        // Función para cambiar el estado de la válvula en ThingSpeak
+        async function cambiarEstadoValvula() {
+            // Obtener el estado actual de la válvula para saber si se debe abrir o cerrar
+            const url = `https://api.thingspeak.com/channels/${channelId}/fields/4/last.json?api_key=${apiKey}`;
+            let response = await fetch(url);
+            let data = await response.json();
+
+            // Cambia el valor a 1 (cerrado) si actualmente es 0, y viceversa
+            const nuevoEstado = data.field4 === "1" ? "0" : "1";
+            const urlUpdate = `https://api.thingspeak.com/update?api_key=${apiKey}&field4=${nuevoEstado}`;
+
+            // Enviar el nuevo estado de la válvula a ThingSpeak
+            await fetch(urlUpdate);
+            alert(`Electroválvula ${nuevoEstado === "1" ? "cerrada" : "abierta"}`);
+            document.getElementById("boton-valvula").innerText = nuevoEstado === "1" ? "Abrir Válvula" : "Cerrar Válvula";
+        }
+    </script>
 </head>
 <body>
-    <div class="container">
-        <h1>Consumo de Agua en Tiempo Real</h1>
-        <div class="data">
-            <p>Flujo actual: <span id="flowRate">Cargando...</span> L/min</p>
-            <p>Volumen total: <span id="totalLiters">Cargando...</span> L</p>
-        </div>
-        <h2>Histórico de Datos</h2>
-        <canvas id="historicalChart" width="400" height="200"></canvas>
-    </div>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="script.js"></script>
+    <h1>Control de Consumo de Agua</h1>
+    <button id="boton-valvula" onclick="cambiarEstadoValvula()">Cerrar Válvula</button> <!-- Botón para controlar la válvula -->
 </body>
 </html>
