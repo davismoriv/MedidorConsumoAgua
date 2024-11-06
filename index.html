@@ -4,31 +4,88 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Control de Consumo de Agua</title>
+    <link rel="stylesheet" href="styles.css"> <!-- Referencia al archivo CSS -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Librería para gráficos -->
+
     <script>
-        // API key y URL del canal de ThingSpeak
-        const apiKey = "PLPULOQL4CDBEO9R";
-        const channelId = "2716817";
-        
-        // Función para cambiar el estado de la válvula en ThingSpeak
+        // API Key y Channel ID de ThingSpeak
+        const apiKey = "76EGNE1F4ZGXJLYD";  // Reemplaza con tu API Key de ThingSpeak
+        const channelId = "2716817";      // Reemplaza con tu Channel ID
+
+        // Función para obtener los datos de consumo en tiempo real y el estado de la válvula
+        async function obtenerDatos() {
+            const url = `https://api.thingspeak.com/channels/${channelId}/fields/1.json?api_key=${apiKey}&results=1`; // Consumir datos del campo 1 (consumo)
+            const response = await fetch(url);
+            const data = await response.json();
+            const consumo = data.feeds[0].field1; // Obtener valor de consumo
+            document.getElementById("consumo-agua").innerText = `Consumo de agua en tiempo real: ${consumo} Litros`;
+
+            // Obtener el estado de la válvula desde ThingSpeak (campo 4)
+            const urlValvula = `https://api.thingspeak.com/channels/${channelId}/fields/4.json?api_key=${apiKey}&results=1`;
+            const responseValvula = await fetch(urlValvula);
+            const dataValvula = await responseValvula.json();
+            const estadoValvula = dataValvula.feeds[0].field4; // Obtener estado de la válvula (abierta o cerrada)
+
+            // Cambiar el texto del botón según el estado de la válvula
+            const botonValvula = document.getElementById("boton-valvula");
+            botonValvula.innerText = estadoValvula === "1" ? "Abrir Válvula" : "Cerrar Válvula";
+        }
+
+        // Función para cambiar el estado de la válvula
         async function cambiarEstadoValvula() {
-            // Obtener el estado actual de la válvula para saber si se debe abrir o cerrar
+            // Obtener el estado actual de la válvula
             const url = `https://api.thingspeak.com/channels/${channelId}/fields/4/last.json?api_key=${apiKey}`;
-            let response = await fetch(url);
-            let data = await response.json();
+            const response = await fetch(url);
+            const data = await response.json();
+            const nuevoEstado = data.field4 === "1" ? "0" : "1"; // Cambiar entre 1 y 0 para abrir o cerrar la válvula
 
-            // Cambia el valor a 1 (cerrado) si actualmente es 0, y viceversa
-            const nuevoEstado = data.field4 === "1" ? "0" : "1";
+            // Actualizar el estado en ThingSpeak
             const urlUpdate = `https://api.thingspeak.com/update?api_key=${apiKey}&field4=${nuevoEstado}`;
-
-            // Enviar el nuevo estado de la válvula a ThingSpeak
             await fetch(urlUpdate);
+
+            // Actualizar la interfaz con el nuevo estado
             alert(`Electroválvula ${nuevoEstado === "1" ? "cerrada" : "abierta"}`);
             document.getElementById("boton-valvula").innerText = nuevoEstado === "1" ? "Abrir Válvula" : "Cerrar Válvula";
         }
+
+        // Función para obtener el consumo del día anterior
+        async function obtenerConsumoDiaAnterior() {
+            const urlHistorico = `https://api.thingspeak.com/channels/${channelId}/fields/1.json?api_key=${apiKey}&start=2023-10-25T00:00:00Z&end=2023-10-25T23:59:59Z`; // Ejemplo para obtener el día 25 de octubre de 2023
+            const response = await fetch(urlHistorico);
+            const data = await response.json();
+
+            const consumoDiaAnterior = data.feeds.length > 0 ? data.feeds[data.feeds.length - 1].field1 : "No disponible"; // Último registro del día anterior
+            document.getElementById("consumo-dia-anterior").innerText = `Consumo de agua del día anterior: ${consumoDiaAnterior} Litros`;
+        }
+
+        // Llamar a las funciones al cargar la página
+        window.onload = async function() {
+            obtenerDatos();  // Obtener datos en tiempo real
+            obtenerConsumoDiaAnterior();  // Obtener datos del día anterior
+        };
+
+        // Actualización cada 15 segundos para obtener datos en tiempo real
+        setInterval(obtenerDatos, 15000); // Actualizar los datos cada 15 segundos
     </script>
 </head>
 <body>
     <h1>Control de Consumo de Agua</h1>
-    <button id="boton-valvula" onclick="cambiarEstadoValvula()">Cerrar Válvula</button> <!-- Botón para controlar la válvula -->
+    
+    <div id="datos-consumo">
+        <!-- Mostrar el consumo de agua en tiempo real -->
+        <p id="consumo-agua">Consumo de agua en tiempo real: Cargando...</p>
+    </div>
+
+    <div id="consumo-dia-anterior">
+        <!-- Mostrar el consumo de agua del día anterior -->
+        <p id="consumo-dia-anterior">Consumo de agua del día anterior: Cargando...</p>
+    </div>
+
+    <div id="control-valvula">
+        <!-- Mostrar el botón para controlar la válvula -->
+        <p>Controla el flujo de agua:</p>
+        <button id="boton-valvula" onclick="cambiarEstadoValvula()">Cargando...</button>
+    </div>
+    
 </body>
 </html>
